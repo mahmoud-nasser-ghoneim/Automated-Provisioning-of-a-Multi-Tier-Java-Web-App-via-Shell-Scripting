@@ -1,0 +1,18 @@
+#!/bin/bash
+# VCD guest customization runs this script twice: "precustomization" and "postcustomization".
+[ "$1" = "postcustomization" ] || exit 0
+[ -f /root/.vprofile-started ] && exit 0
+touch /root/.vprofile-started
+
+# name resolution between the VMs
+grep -q "# vprofile hosts" /etc/hosts || cat >> /etc/hosts <<'EOF'
+# vprofile hosts
+${hosts_block}
+EOF
+
+# save the real provisioning script and run it in the background
+cat > /root/provision.sh <<'VPROFILE_EOF'
+${script_body}
+VPROFILE_EOF
+chmod 700 /root/provision.sh
+systemd-run --unit=vprofile-provision --no-block /bin/bash /root/provision.sh
